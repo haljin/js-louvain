@@ -5,19 +5,34 @@
 *       for graph operation.                                            *
 *                                                                       *
 ************************************************************************/
-
 var Graph = (function () {
     function Graph(inNodes, edges) {
         this.nodes = {};
 
         for (var i = 0; i < inNodes.length; i++) {
-            nodes[inNodes[i]] = {};
+           this.nodes[inNodes[i]] = {};
         }
         for (var i = 0; i < edges.length; i++) {
-            nodes[edges[i].a][edges[i].b] = { weight: edges[i].score };
-            nodes[edges[i].b][edges[i].a] = { weight: edges[i].score };
+            this.nodes[edges[i].a][edges[i].b] = { weight: edges[i].score };
+            this.nodes[edges[i].b][edges[i].a] = { weight: edges[i].score };
         }
 
+    };
+
+    Graph.prototype.copy = function (newGraph) {
+        for (node in this.nodes) {
+            newGraph.add_node(node);
+            for (nb in this.nodes[node]) {
+                if (!newGraph.get_node(nb))
+                    newGraph.add_node(nb);                    
+                newGraph.add_edge(node, nb, this.nodes[node][nb].weight);
+            }
+        }
+
+    };
+
+    Graph.prototype.clear = function () {
+        this.nodes = {};
     };
 
     Graph.prototype.add_node = function (node) {
@@ -29,6 +44,17 @@ var Graph = (function () {
         this.nodes[a][b] = this.nodes[b][a] = { weight: score };
     };
 
+    Graph.prototype.remove_node = function (node) {
+        for (n in this.nodes)
+            delete this.nodes[n][node];
+        delete this.nodes[node];
+    };
+
+    Graph.prototype.remove_edge = function (a, b) {
+        delete this.nodes[a][b];
+        delete this.nodes[b][a];
+    };
+
     Graph.prototype.get_edge = function (a, b) {
         return this.nodes[a][b];
     };
@@ -37,20 +63,48 @@ var Graph = (function () {
         return this.nodes[node];
     };
 
-
-    Graph.prototype.degree = function (node) {
-        var deg = 0;
-        for (nb in this.nodes[node]) deg++;
-        return deg;
+    Graph.prototype.get_nodes = function () {
+        var result = [];
+        for (node in this.nodes)
+            result.push(node);
+        return result;
     };
 
+    Graph.prototype.get_edges = function () {
+        var result = [];
+        var visited = {};
+        for (node in this.nodes)
+            for (nb in this.nodes[node])
+                if (!visited[nb + node]) {
+                    result.push({ a: node, b: nb, data: this.nodes[node][nb] });
+                    visited[node + nb] = true;
+                }
+        return result;
+    };
 
+    Graph.prototype.node_count = function () {
+        return this.get_nodes().length;
+    };
 
+    Graph.prototype.edge_count = function () {
+        return this.get_edges().length;
+    }
+
+    Graph.prototype.degree = function (node, weighted) {
+        var deg = 0;
+        for (nb in this.nodes[node]) weighted ? deg += this.nodes[node][nb].weight : deg++;
+        return deg;
+    };
 
     return Graph;
 })();
 
-
+/************************************************************************
+*       CLASS: louvain                                                  *
+*       Based on Python code by Thomas Aynaud <thomas.aynaud@lip6.fr>   *
+*       Implements Louvain method of community detection in graphs      *
+*                                                                       *
+************************************************************************/
 var louvain = function () {
 
     var _node2com = {};
@@ -74,7 +128,7 @@ var louvain = function () {
         return partition;
     };
 
-    var best_communities = function (nodes, connections) {
+    var best_communities = function (graph) {
         var dendro = generate_dendogram({ nodes: nodes, conns: connections });
         return communities_at_level(dendro, dendro.length - 1);
     };
@@ -185,36 +239,7 @@ var louvain = function () {
 
     };
 
-    var __degree = function(graph, node) {
-        var result = 0;
-        for(var i = 0; i< graph.conns.length; i++){
-            if(graph.conns[i].a == node || graph.conns[i].b == node)
-                result += graph.conns[i].score;
-        };
-    };
 
-    var __get_edge = function(a, b, graph) {
-        for(var i = 0; i< graph.conns.length; i++){
-            if ((graph.conns[i].a == a && graph.conns[i].b == b) ||
-                (graph.conns[i].a == b && graph.conns[i].b == a))
-                return graph.conns[i].score;
-        }
-        return 0;
-    };
-
-    var __copy_graph = function (graph) {
-        var newGraph = { nodes: [], conns: [] };
-
-        for(var i = 0; i< graph.nodes.length; i++)
-            newGraph.nodes.append(graph.nodes[i]);
-        for (var i = 0; i < graph.conns.length; i++)
-            newGraph.conns.append({
-                a: graph.conns[i].a,
-                b: graph.conns[i].b,
-                score: graph.conns[i].score
-            });
-        return newGraph
-    }
 
     return {
         best_communities: best_communities
