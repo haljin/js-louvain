@@ -37,9 +37,10 @@ var louvain = function () {
         if (graph.edge_count() == 0) {
             var part = {};
             var nodes = graph.get_nodes();
+			var ind = 0;
             for(node in nodes)
-                part[node] = node;
-            return part;
+                part[node] = ind++;
+            return [part];
         }
 
         var curr_graph = new Graph([],[]);
