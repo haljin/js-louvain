@@ -132,7 +132,7 @@ var louvain = function () {
 
         for (var i = 1; i < level + 1; i++)
             for (node in partition)
-                partition[node] = dendro[i][node];
+                partition[node] = dendro[i][partition[node]];
 
         return partition;
     };
